@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>モード切替</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0c0c0e;
+    --surface: #14141a;
+    --border: #22222e;
+
+    --c0: #8a8a9e;        /* off — gray */
+    --c0rgb: 138,138,158;
+    --c1: #5b9bd5;        /* study — blue */
+    --c1rgb: 91,155,213;
+    --c2: #d4a520;        /* work — yellow */
+    --c2rgb: 212,165,32;
+    --c3: #2ec4a0;        /* immerse — emerald */
+    --c3rgb: 46,196,160;
+
+    --text: #e8e8f2;
+    --muted: #44445a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+    padding: 48px 24px;
+  }
+
+  /* full-screen color wash */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    transition: background 1.4s ease;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    z-index: 1;
+  }
+
+  .header .label {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .header .mode-name {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 30px;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    min-height: 42px;
+    transition: opacity 0.35s, color 0.6s;
+  }
+
+  .header .mode-sub {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    margin-top: 7px;
+    min-height: 14px;
+    transition: opacity 0.35s;
+  }
+
+  /* color bar under name */
+  .header .bar {
+    height: 2px;
+    width: 40px;
+    border-radius: 2px;
+    margin: 12px auto 0;
+    transition: background 0.6s, width 0.5s;
+    background: var(--muted);
+  }
+
+  /* ── Buttons ── */
+  .buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 340px;
+    z-index: 1;
+  }
+
+  .btn {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    transition: border-color 0.4s, box-shadow 0.4s, transform 0.12s, background 0.4s;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active { transform: scale(0.96); }
+
+  /* color fill on active */
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    border-radius: 16px;
+  }
+
+  /* left accent stripe */
+  .btn::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 20%; bottom: 20%;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: transparent;
+    transition: background 0.4s, top 0.4s, bottom 0.4s;
+  }
+
+  .btn.active::after {
+    top: 12%; bottom: 12%;
+  }
+
+  /* icon circle */
+  .btn .icon-wrap {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    background: var(--border);
+    transition: background 0.4s, box-shadow 0.4s;
+    position: relative; z-index: 1;
+  }
+
+  .btn .info { flex: 1; position: relative; z-index: 1; }
+
+  .btn .name {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .btn .desc {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    line-height: 1.6;
+    transition: color 0.4s;
+  }
+
+  .btn .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.4s, box-shadow 0.4s;
+    flex-shrink: 0;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Mode-specific active styles ── */
+
+  /* OFF — gray */
+  .btn[data-mode="0"]::before { background: radial-gradient(ellipse at 0% 50%, rgba(var(--c0rgb),0.14) 0%, transparent 75%); }
+  .btn[data-mode="0"]::after  { background: rgba(var(--c0rgb),0.7); }
+  .btn[data-mode="0"].active  { border-color: rgba(var(--c0rgb),0.45); box-shadow: 0 0 28px rgba(var(--c0rgb),0.12), inset 0 0 0 0px transparent; background: #17171e; }
+  .btn[data-mode="0"].active::before { opacity: 1; }
+  .btn[data-mode="0"].active .icon-wrap { background: rgba(var(--c0rgb),0.18); box-shadow: 0 0 14px rgba(var(--c0rgb),0.2); }
+  .btn[data-mode="0"].active .dot { background: rgb(var(--c0rgb)); box-shadow: 0 0 8px 2px rgba(var(--c0rgb),0.6); }
+  .btn[data-mode="0"].active .desc { color: rgba(var(--c0rgb),0.7); }
+
+  /* STUDY — blue */
+  .btn[data-mode="1"]::before { background: radial-gradient(ellipse at 0% 50%, rgba(var(--c1rgb),0.14) 0%, transparent 75%); }
+  .btn[data-mode="1"]::after  { background: rgba(var(--c1rgb),0.8); }
+  .btn[data-mode="1"].active  { border-color: rgba(var(--c1rgb),0.45); box-shadow: 0 0 32px rgba(var(--c1rgb),0.15); background: #13161e; }
+  .btn[data-mode="1"].active::before { opacity: 1; }
+  .btn[data-mode="1"].active .icon-wrap { background: rgba(var(--c1rgb),0.18); box-shadow: 0 0 16px rgba(var(--c1rgb),0.25); }
+  .btn[data-mode="1"].active .dot { background: rgb(var(--c1rgb)); box-shadow: 0 0 8px 2px rgba(var(--c1rgb),0.6); }
+  .btn[data-mode="1"].active .desc { color: rgba(var(--c1rgb),0.7); }
+
+  /* WORK — yellow */
+  .btn[data-mode="2"]::before { background: radial-gradient(ellipse at 0% 50%, rgba(var(--c2rgb),0.13) 0%, transparent 75%); }
+  .btn[data-mode="2"]::after  { background: rgba(var(--c2rgb),0.85); }
+  .btn[data-mode="2"].active  { border-color: rgba(var(--c2rgb),0.45); box-shadow: 0 0 32px rgba(var(--c2rgb),0.13); background: #181610; }
+  .btn[data-mode="2"].active::before { opacity: 1; }
+  .btn[data-mode="2"].active .icon-wrap { background: rgba(var(--c2rgb),0.18); box-shadow: 0 0 16px rgba(var(--c2rgb),0.25); }
+  .btn[data-mode="2"].active .dot { background: rgb(var(--c2rgb)); box-shadow: 0 0 8px 2px rgba(var(--c2rgb),0.55); }
+  .btn[data-mode="2"].active .desc { color: rgba(var(--c2rgb),0.7); }
+
+  /* IMMERSE — emerald */
+  .btn[data-mode="3"]::before { background: radial-gradient(ellipse at 0% 50%, rgba(var(--c3rgb),0.13) 0%, transparent 75%); }
+  .btn[data-mode="3"]::after  { background: rgba(var(--c3rgb),0.8); }
+  .btn[data-mode="3"].active  { border-color: rgba(var(--c3rgb),0.45); box-shadow: 0 0 32px rgba(var(--c3rgb),0.14); background: #111a18; }
+  .btn[data-mode="3"].active::before { opacity: 1; }
+  .btn[data-mode="3"].active .icon-wrap { background: rgba(var(--c3rgb),0.18); box-shadow: 0 0 16px rgba(var(--c3rgb),0.25); }
+  .btn[data-mode="3"].active .dot { background: rgb(var(--c3rgb)); box-shadow: 0 0 8px 2px rgba(var(--c3rgb),0.55); }
+  .btn[data-mode="3"].active .desc { color: rgba(var(--c3rgb),0.7); }
+
+  /* ── Timer ── */
+  .timer-strip {
+    z-index: 1;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .timer-strip.visible { opacity: 1; transform: translateY(0); }
+  .timer-strip .since { font-size: 9px; color: var(--muted); letter-spacing: 0.25em; }
+  .timer-strip .elapsed { font-size: 26px; letter-spacing: 0.18em; margin-top: 5px; transition: color 0.6s; }
+</style>
+</head>
+<body>
+
+<div class="ambient" id="ambient"></div>
+
+<div class="header">
+  <div class="label">現在のモード</div>
+  <div class="mode-name" id="modeName">—</div>
+  <div class="bar" id="bar"></div>
+  <div class="mode-sub" id="modeSub"></div>
+</div>
+
+<div class="buttons" id="buttons"></div>
+
+<div class="timer-strip" id="timer">
+  <div class="since">このモードに入って</div>
+  <div class="elapsed" id="elapsed">00:00</div>
+</div>
+
+<script>
+const modes = [
+  {
+    id: 0,
+    icon: '◎',
+    name: 'オフ',
+    desc: 'どのモードでもない、素の時間',
+    sub: 'OFF — just existing',
+    color: '#8a8a9e',
+    ambient: 'rgba(138,138,158,0.05)',
+  },
+  {
+    id: 1,
+    icon: '◈',
+    name: '勉強',
+    desc: '授業・独学。理解することだけ考える',
+    sub: 'STUDY — understand first',
+    color: '#5b9bd5',
+    ambient: 'rgba(91,155,213,0.07)',
+  },
+  {
+    id: 2,
+    icon: '▣',
+    name: 'バイト',
+    desc: 'タスク処理モード。役割に徹する',
+    sub: 'WORK — execute the role',
+    color: '#d4a520',
+    ambient: 'rgba(212,165,32,0.06)',
+  },
+  {
+    id: 3,
+    icon: '●',
+    name: '没入',
+    desc: '作品・ゲーム。感受性全開、一点集中',
+    sub: 'IMMERSE — feel everything',
+    color: '#2ec4a0',
+    ambient: 'rgba(46,196,160,0.07)',
+  },
+];
+
+let currentMode = null;
+let startTime = null;
+let timerInterval = null;
+
+const btnContainer = document.getElementById('buttons');
+const modeNameEl = document.getElementById('modeName');
+const modeSubEl  = document.getElementById('modeSub');
+const barEl      = document.getElementById('bar');
+const ambientEl  = document.getElementById('ambient');
+const timerEl    = document.getElementById('timer');
+const elapsedEl  = document.getElementById('elapsed');
+
+modes.forEach(m => {
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.dataset.mode = m.id;
+  btn.innerHTML = `
+    <div class="icon-wrap">${m.icon}</div>
+    <div class="info">
+      <div class="name">${m.name}</div>
+      <div class="desc">${m.desc}</div>
+    </div>
+    <span class="dot"></span>
+  `;
+  btn.addEventListener('click', () => activate(m.id));
+  btnContainer.appendChild(btn);
+});
+
+function activate(id) {
+  if (currentMode === id) return;
+  currentMode = id;
+  const m = modes[id];
+
+  // header fade
+  modeNameEl.style.opacity = 0;
+  modeSubEl.style.opacity  = 0;
+  setTimeout(() => {
+    modeNameEl.textContent = m.name;
+    modeNameEl.style.color = m.color;
+    modeSubEl.textContent  = m.sub;
+    modeNameEl.style.opacity = 1;
+    modeSubEl.style.opacity  = 1;
+  }, 160);
+
+  barEl.style.background = m.color;
+  barEl.style.width = '56px';
+
+  // ambient
+  ambientEl.style.background =
+    `radial-gradient(ellipse at 25% 35%, ${m.ambient} 0%, transparent 65%)`;
+
+  // elapsed color
+  elapsedEl.style.color = m.color;
+
+  // buttons
+  document.querySelectorAll('.btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.mode) === id);
+  });
+
+  // timer
+  startTime = Date.now();
+  clearInterval(timerInterval);
+  timerEl.classList.add('visible');
+  timerInterval = setInterval(tick, 1000);
+  tick();
+}
+
+function tick() {
+  if (!startTime) return;
+  const s   = Math.floor((Date.now() - startTime) / 1000);
+  const mm  = Math.floor(s / 60).toString().padStart(2, '0');
+  const ss  = (s % 60).toString().padStart(2, '0');
+  elapsedEl.textContent = `${mm}:${ss}`;
+}
+
+activate(0);
+</script>
+</body>
+</html>
